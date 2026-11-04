@@ -8,11 +8,14 @@ facts come from and what standard they were held to.
 | Artifact | Role |
 |---|---|
 | **Retail ROM dump** (two editions, 4 MiB each, hashed) | the only source of truth: every table, every byte, every address |
-| **Annotated disassembly of the same engine** | routine boundaries, names and cross-references — a map, checked against the ROM before use |
+| **Annotated disassembly of the same engine** ([`JoeyLandy/dwm2decomp`](https://github.com/JoeyLandy/dwm2decomp), MIT) | routine boundaries, names and cross-references — a map, checked against the ROM before use |
 | **Running execution** (a cycle-level emulator trace, and/or a static recompilation with a differential harness) | behaviour claims: which routine runs when, what changes at which frame |
 
 Nothing was taken from another decompilation's conclusions without checking the
-bytes, and nothing was inferred from "this looks like how game X does it".
+bytes, and nothing was inferred from "this looks like how game X does it". Routine
+names in these notes follow that disassembly's naming (its `src/ram.asm` symbol
+table) so a reader can move between the two; where our reading of the behaviour
+differs, the note says so rather than silently renaming.
 
 ## The standard each claim meets
 

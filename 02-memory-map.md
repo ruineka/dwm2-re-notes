@@ -12,8 +12,9 @@ cartridge RAM (see `03-sram-save-format.md`), `$FF80`–`$FFFE` is HRAM.
 | Address | Name | Meaning |
 |---|---|---|
 | `$C5DB` | `wGameMode` | index into the 9-entry game-mode tables (see `04-engine-core.md`) |
-| `$C5DC` | `wModeChangeRequest` | non-zero asks the main loop to restart in `wGameMode` at the next fade boundary |
+| `$C5DC` | `wModeState` | which screen or step runs inside that mode; the debug menu and the pause menu reuse it as their own sub-screen index |
 | `$C5DD` | `wWorldMapState` | world-map screen state (field state 8) |
+| `$C5DF` | `wModeChangeRequest` | non-zero asks the main loop to leave its mode wait and run `RunGameModeInit` again |
 | `$C5DE` | `wGameMode2Arg` | argument for game mode 2 |
 | `$DFFF` | `wStackTop` | stack starts here (`ld sp,$DFFF`) |
 | `$C525` | `wIsCGB` | 1 when boot found CGB hardware |
@@ -104,7 +105,7 @@ Field actions and triggers:
 | `$C910` | `wTilesUnderPoint` | the 2×2 tile block under a point (collision) |
 | `$C916`/`$C917` | `wTalkEventGroup` / `wTalkEventIndex` | which talk event to dispatch |
 | `$C918` | `wStepTriggerFlag` | step triggers already scanned for this step |
-| `$CCCD` | `wMapObjectCount` / `$CC48` `wMapObjects` | map objects (8 B each) for town and key-world maps |
+| `$CC47` / `$CC48` | `wMapObjectCount` / `wMapObjects` | map objects (8 B each) for town and key-world maps |
 | `$CCE9` / `$CCEB` | `wScreenTriggerCount` / `wScreenTriggers` | 4-byte screen trigger entries |
 | `$CCEA` | `wWarpPending` | set by the warp routines |
 | `$C88B` | `wLastWarpIndex` | index of the last warp taken |
