@@ -10,8 +10,17 @@ the two consoles permanently, so this file is deliberately explicit.
 
 * Serial interrupt vector `$0058` → `SerialInterruptHandler`, which ends in
   `$00:255B` → `RunLinkSession` (`$1B:4001`).
-* `wLinkRole $C57F`: bit 1 set = this side drives the clock; clear = the other
-  side does. Who presses A sets it (`RunLinkSession_FindPartner $1B:402A`).
+* `wLinkRole $C57F` bit 1 is not one rule, it is three:
+  * in the **data exchange** (`LinkSendStepWithBuffer`, `$1B:45A1`) bit 1 set
+    means this side transmits and clocks (`StartSerialTransferInternalClock`,
+    `$08AD`, `SC` bits 0+7); clear means it arms `$F9` and waits
+    (`SerialSendByte`, `$08BA`, `SC` bit 7 only);
+  * in the **resync greeting** (`$00:4006`) the polarity is inverted: bit 1 clear
+    drives the clock;
+  * it is **re-derived after every mode change** from the partner's greeting byte
+    (`$70 | wIsCGB`), so on a mixed DMG/CGB pair the DMG side ends with bit 1 set
+    no matter who pressed A. `RunLinkSession_FindPartner` (`$1B:402A`) sets it
+    when it receives a leader code and clears it on a follower code.
 * The clock driver writes `$81` to `SC` (internal clock, start transfer); the
   other side waits for the interrupt.
 * In link play the VBlank handler runs a reduced path (sound tick, sound queue,
@@ -51,8 +60,9 @@ Follower table `SendLinkByteForMenuOption_Data $07:65BD`:
   then returns to the title; the other side's cursor jumps to the partner's row.
 * `$FE` (state 7 `$07:4178`) prints "Game Link cannot be used with Super Game
   Boy." but **nothing in the ROM writes `$FE`** — a dead path.
-* Two CGBs: `$00:14D1` corrects the roles once; if both consoles are CGB it can
-  leave both roles at 0, which is the one pairing case with no trace evidence.
+* Two CGBs: `$00:4006` corrects the roles once from the greeting byte. It never
+  clears bit 1 on either side, so a 0/0 pair only happens if neither console ever
+  received a leader or follower code (both sat on a menu row without pressing A).
 
 ## Sessions
 
@@ -77,7 +87,7 @@ Follower table `SendLinkByteForMenuOption_Data $07:65BD`:
 | Team | 234 | 3 × 78 |
 | Command block | 19 | `turn0 turn1 turn2 seedLo seedHi menu menu a0..a5 m0..m2 s0..s2` |
 | Key block | 6 | 4-byte key entry + 2-byte seed |
-| Key world | 405 | sent as 14 × 30 B + 15 B |
+| Key world | 405 | 13 chunks of 30 B plus a 15 B tail (14 transfers, `$0195` divided by `$1E`) |
 | Child block | 100 | Terry breeding |
 | Gift block | 216 | dream egg |
 | Egg data | 16 | |
@@ -103,10 +113,12 @@ transport.
 
 ## Seeds
 
-The clock driver's seed wins: `$31:5DA7`, `$33:5BA5`, `$A0:503A` copy the
-driver's random seed into both sides' battle/key state. A reimplementation must
-therefore keep the two random generators in lockstep with the byte stream, not
-with the frame counter.
+The **bit-1-clear** side's seed wins: `$33:5BB3` copies its own `wRandomLo/Hi`
+into `wRandomSeed2` when bit 1 is clear, and copies the received seed back when
+bit 1 is set (`$31:5DA7`, `$A0:503A` do the same for their blocks). Since
+`FindPartner` leaves bit 1 clear on the side that sent the leader code, the
+side that pressed A is the seed authority. A reimplementation must keep the two
+generators in lockstep with the byte stream, not with the frame counter.
 
 ## Edition differences
 

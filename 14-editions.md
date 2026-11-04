@@ -65,7 +65,9 @@ the wrong branch.
 * **Link works across editions.** The wire protocol is edition-neutral; the only
   edition-varying wire byte is `$33:58CA` (team-mode fight-info byte 15: `$00`
   Tara, `$01` Cobi) which lands in `wLinkFightInfo $C963` and is never read.
-  `$A3:4244` (formation flag match) only runs outside link battles.
+  `$A3:4244` (formation flag match, inside `FindFormationForSide` `$A3:41CF`) is
+  reached from the battle engine; whether a link battle can reach it is
+  **unverified** — the deciding probe is that routine with `wLinkMode = 1`.
 * **Data-level divergence is real.** Because banks `$34`/`$88`/`$0A` differ, a
   cross-edition bred child can come out with different stats on each side, and a
   traded key can show a different name/encounters locally. The protocol
