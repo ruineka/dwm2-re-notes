@@ -59,6 +59,23 @@ seventh argument waits for a button. A button pressed while waiting for a glyph 
 printing the rest at once. Each 16-byte copy waits on `rSTAT` bit 1, so writes land in the VBlank-safe window.
 Window defaults: 2 rows × 18 columns at `vTiles1 = $8800`.
 
+### Compound commands seen in the text data
+
+Strings in the ROM are written as command pairs, and the pairs are what the data
+uses idiomatically:
+
+| Compound | Bytes | Meaning |
+|---|---|---|
+| `<NEXT>` | `EF EE` | line feed: `$EF` swallows its argument on line 1, `$EE` clears the second line and returns to the line start |
+| `<PROMPT>` | `FA F7` | show the blinking "more" arrow, then wait for a button |
+| `<BUF0>`–`<BUF3>` | `F9 00`, `F9 10`, `F9 20`, `F9 30` | insert one of the four text buffers at that offset (`wTextBuf0`–`3`, `$C130`) |
+| `<MAP_MUSIC>` | `E9 FF` | (re)start the map's music |
+
+The window is 18 cells wide, so a line that would run past column 18 must be
+split with `<NEXT>`; the printer does not wrap by itself. Fixed-width fields
+(names, `10` bytes; compact monster names, `5` bytes) are stored as raw
+character bytes with `$F0` only used in strings, not in the saved fields.
+
 | Var | Meaning |
 |---|---|
 | `wStringCategory` `$C528`, `wStringIndex` `$C529`, `wStringBank` `$C52A` | resolved string / its bank |
@@ -81,7 +98,7 @@ Table at `$00:$2956`, indexed by `byte-$E0`.
 | `$E8` | col, row | glyph destination = window tile + `16*(row*width+col)` |
 | `$E9` | id | play sound: `< $60`, `$CC`, `$CF`, `$D6` = music, else SFX; no wait; `E9 FF` restarts map music |
 | `$EA`/`$EB` | — | voice beep on, `wTextBeepSound = $6B`/`$6A` |
-| `$EC` | — | pause: clears bit 7; length from `wTextSpeed`; at speed 7 waits for a button |
+| `$EC` | arg | pause: clears bit 7; length from the seven-entry frame-count table at `$2A66` (`6, 12, 20, 26, 32, 40, 48`); the seventh waits for a button |
 | `$ED` | — | `<INSTANT>`: set `wTextControl` bit 7 (bulk print) |
 | `$EE` / `$F3` | — | clear the second line, back to the line start / move to the window's first line (not the line start) |
 | `$EF` | — | first half of `<NEXT>`; on line 1 it swallows the following byte |

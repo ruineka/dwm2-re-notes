@@ -7,7 +7,8 @@ facts come from and what standard they were held to.
 
 | Artifact | Role |
 |---|---|
-| **Retail ROM dump** (two editions, 4 MiB each, hashed) | the only source of truth: every table, every byte, every address |
+| **Retail ROM dump** (Tara's Adventure, 4 MiB, sha256 `fc6809c3…`) | the default source of truth: every table, every byte, every address |
+| **Retail ROM dump** (Cobi's Journey, 4 MiB, sha256 `8e38a742…`) | the same claims in the second edition; the two differ in 15 banks, listed in `14-editions.md` |
 | **Annotated disassembly of the same engine** ([`JoeyLandy/dwm2decomp`](https://github.com/JoeyLandy/dwm2decomp), MIT) | routine boundaries, names and cross-references — a map, checked against the ROM before use |
 | **Running execution** (a cycle-level emulator trace, and/or a static recompilation with a differential harness) | behaviour claims: which routine runs when, what changes at which frame |
 
