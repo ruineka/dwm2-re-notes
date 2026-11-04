@@ -80,9 +80,17 @@ Regions that hold compact records:
 
 | Region | File range | Count |
 |---|---|---|
-| bank-0 farm cache | `0x1356`–`0x1FE8` | 29 × `0x6F` |
+| bank-0 farm cache | `0x1356`–`0x1FE8` | 29 × `0x6F` (at `$B356`) |
+| bank-1 sleeper slot | `0x2000`–`0x206E` | 1 × `0x6F`, slot `$1D` at `$A000`, outside the checksum |
 | bank-1 records | `0x206F`–`0x2D70` | 30 × `0x6F` (covered by the bank-1 checksum) |
-| record backup | `0x2D71`–`0x3A72` | compact + one extra slot |
+| bank-1 sleeper backup | `0x3A04`–`0x3A72` | the `$1D` slot's second copy |
+| record backup chain | `0x2D71`–`$3A03` | 28 compact slots, `$AD71`–`$BA72` in SRAM |
+
+Byte 0 bit 7 of a compact record is the in-use flag. Byte 1 packs sex, egg state
+and the species high bits; six 5-letter names start at `3 + 5k` with their
+voicing marks in `$21`–`$28`; 27 resistances occupy two bits each; the WLD high
+bits ride inside the level bytes. A save is staged: `wSaveStep` and
+`wSaveRecordIndex` pack one record per call.
 
 ## Saved-state blocks (bank 1, file `0x3B01`, `0x3BF` bytes total)
 
@@ -120,8 +128,15 @@ Player block fields:
 | `0x3D3A` | game_completed | |
 | `0x3D97` | **link_setting** | non-zero unlocks the 8th title-menu row (TERRY) |
 
+The `0xB5` block at `0x3E0B` is the **current-map snapshot** copied from
+`$CC42`–`$CCF6`: key-world slot, area, `wMapType`, floor, the eight saved map
+objects and the screen triggers; its second byte (`0x3E0D`) is the saved map
+type. Key-world flags are not here: `wKeyWorldFlags` `$CD07` is written to SRAM
+bank 2 as a marker byte plus `0x194` bytes.
+
 `0x3EC0`–`0x3F97` (`0xD8` B) is the GM2 timer block: frames/seconds/minutes,
-roll bytes, 11 family scores and the gift-Egg record.
+roll bytes, 11 family scores and the gift-Egg record. It is written only when
+the gift record's monster state is 0 or 1 (the guard byte is `0x3EF3`).
 
 ## Key worlds (banks 2 and 3)
 
