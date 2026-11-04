@@ -11,7 +11,8 @@ the two consoles permanently, so this file is deliberately explicit.
 * Serial interrupt vector `$0058` → `SerialInterruptHandler`, which ends in
   `$00:255B` → `RunLinkSession` (`$1B:4001`).
 * `wLinkRole $C57F` bit 1 is not one rule, it is three:
-  * in the **data exchange** (`LinkSendStepWithBuffer`, `$1B:45A1`) bit 1 set
+  * in the **data exchange** (`LinkSendStepWithBuffer`, `$1B:468A`; the same
+    18-byte shape also sits at `$1B:45A1`, the joypad-byte exchanger) bit 1 set
     means this side transmits and clocks (`StartSerialTransferInternalClock`,
     `$08AD`, `SC` bits 0+7); clear means it arms `$F9` and waits
     (`SerialSendByte`, `$08BA`, `SC` bit 7 only);
@@ -50,19 +51,31 @@ Follower table `SendLinkByteForMenuOption_Data $07:65BD`:
 
 ## Pairing (`$1B:402A`)
 
-* A **leader** byte is accepted only while `wTitleScreenSubState == 1`; it makes
-  the receiver passive (`wLinkRole |= 3`).
-* A **follower** byte is accepted only while `wTitleScreenSubState == 2`; it
-  makes the receiver the clock driver (`wLinkRole = set 0, res 1`).
+* A **leader** byte is accepted only while `wTitleScreenSubState == 1`; on
+  receipt `wLinkRole` gets bits 0 and 1 set (`or 3`).
+* A **follower** byte is accepted only while `wTitleScreenSubState == 2`; on
+  receipt bit 1 is cleared.
+
+Do not map leader/follower onto clock/passive: bit 1 is re-derived by the
+greeting after every mode change (below), and the exchange works because both
+sides read bit 1 at the moment of the transfer, not because of who pressed A.
 * The received code's option must equal the local menu row. On a mismatch the
   A-presser goes to state 4 (`$07:4289`) and shows
   `String_07_00_05` — "Game Link is not ready. Please check and try again." —
   then returns to the title; the other side's cursor jumps to the partner's row.
-* `$FE` (state 7 `$07:4178`) prints "Game Link cannot be used with Super Game
-  Boy." but **nothing in the ROM writes `$FE`** — a dead path.
-* Two CGBs: `$00:4006` corrects the roles once from the greeting byte. It never
-  clears bit 1 on either side, so a 0/0 pair only happens if neither console ever
-  received a leader or follower code (both sat on a menu row without pressing A).
+* `$FE` is a **live protocol byte**, not a dead path. The title menu treats
+  `$FF` (no answer) and `$FE` alike as "this partner cannot take link entry 2":
+  the A-presser answers `$F4` and `BeginStringDisplay_Bank07` prints "Game Link
+  cannot be used with Super Game Boy." in the 20 × 5 box — title state 5 with
+  string 7, not a state constant at `$07:4178` (that address is the string
+  itself). In the link rules editor and the battle set-up, `$FE` is the
+  edit/decline byte the two sides exchange (`$1B:5682` and three more sites store
+  it to `$C994`).
+* Two CGBs: `$00:1583` corrects the roles once from the greeting byte it builds
+  as `$70 | wIsCGB` (`ld a,[wIsCGB]`, `or $70`) and passes to `$08AD`/`$08BA`. It
+  never clears bit 1 on either side, so a 0/0 pair only happens if neither
+  console ever received a leader or follower code (both sat on a menu row
+  without pressing A).
 
 ## Sessions
 
