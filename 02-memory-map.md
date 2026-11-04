@@ -22,8 +22,8 @@ cartridge RAM (see `03-sram-save-format.md`), `$FF80`–`$FFFE` is HRAM.
 | `$C526` / `$C527` | `wBGPaletteUploadRequest` / `wOBJPaletteUploadRequest` | ask the VBlank handler to upload the palette buffers |
 | `$C49F` | `wBGPaletteBuffer` | 8 CGB BG palettes (64 B) used by the fade routines |
 | `$C4DF` | `wOBJPaletteBuffer` | 8 CGB OBJ palettes (64 B) |
-| `$C0F0` | `wBGPaletteCopy` | 64-byte copy of the BG palettes (screen-flash effects) |
-| `$D040` | `wDMGPaletteBytes` | the three DMG palette bytes used by fades |
+| `$C0F0` | `wBGPaletteCopy` | BG palette copy for screen-flash effects; the STAT scroll wave indexes it with `rLY` up to `$8F`, so it is at least `$90` bytes and overlaps `$C130` onward |
+| `$C5E9`–`$C5EB` | `wDMGPaletteBGP` / `wDMGPaletteOBP0` / `wDMGPaletteOBP1` | the three DMG palette bytes `CopyDMGPalettesToHardware` pushes to `rBGP`/`rOBP0`/`rOBP1` |
 
 ## VBlank queues and OAM
 

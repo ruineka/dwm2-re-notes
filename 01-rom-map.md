@@ -11,12 +11,12 @@ a bank is 16 KiB, so `$11:459A` means file offset `0x4459A`.
 |---|---|
 | Size | 4,194,304 B = 256 banks × 16 KiB |
 | Cartridge type | `$1B` = MBC5 + RAM + battery |
-| ROM size code | `$0C` (4 MB) |
+| ROM size code | `$07` (4 MiB = 256 banks of 16 KiB; header byte at `$0148`) |
 | RAM size code | `$03` (4 banks × 8 KiB = 32 KiB) |
 | CGB flag | `$80` (CGB-only title; runs on DMG in monochrome compatibility mode) |
 | SGB flag | `$03` |
 | Title | `DWM2-T` (Tara's Adventure) / `DWM2-C` (Cobi's Journey) |
-| Far-call convention | Enix `rst $10` (bank switch) + `rst $18` (call through HL) |
+| Far-call convention | Enix `rst $10` (`CallInBank`: push bank, switch, `call`, restore) and `rst $00` (256-entry `dw` dispatch table) |
 
 Only **157 of the 256 banks** contain data; the rest are padding (every byte
 `$00` or `$FF`). The last non-empty bank is `$F2`. Empty banks:
@@ -28,7 +28,7 @@ Only **157 of the 256 banks** contain data; the rest are padding (every byte
 
 | Bank | Contents |
 |---|---|
-| `$00` | Home bank: boot, main loop, interrupt handlers (VBlank/STAT/timer/serial/joypad), bank switching (`rst $10`/`rst $18` trampolines), the text printer, palette fades, OAM DMA install, decompression, general helpers |
+| `$00` | Home bank: boot, main loop, interrupt handlers (VBlank/STAT/timer/serial/joypad), bank switching (`rst $10` `CallInBank`, `rst $00` `JumpTable`), the text printer, palette fades, OAM DMA install, decompression, general helpers |
 | `$01` | Debug menu (game mode 0): message test, debug battle set-up, monster creation, results |
 | `$02` | Field mode (game mode 1): map play, map header loading, field states, collision, field menus |
 | `$03` | Pause menu (game mode 2): items, monsters, plan, info |

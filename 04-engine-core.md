@@ -9,8 +9,10 @@ Routines below are named as in the annotated disassembly; addresses are
 
 1. `di`, `ld sp,$DFFF` (`wStackTop`).
 2. `DisableVBlankTimerSerialJoypadInterrupts`.
-3. `ClearWRAMHRAMAndSRAMBanks0And2` — WRAM, HRAM and the two visible SRAM banks
-   are cleared (a save is *not* preserved across reset).
+3. `ClearWRAMHRAMAndSRAMBanks0And2` — WRAM, HRAM, SRAM bank 2 and SRAM bank 0
+   are cleared. SRAM bank 1, which holds the save (`sSaveSignature` at `$BB00` is
+   `$55` when one exists), is never selected, so a save survives a reset; what is
+   lost is the in-progress state and the SRAM working copies.
 4. `InstallOamDmaRoutine` — copies the DMA stub to `$FF80`.
 5. Clears `$8000`–`$9BFF` (`vTiles0`, `$1C00` bytes); on CGB also clears the BG
    map attributes in VRAM bank 1 and restores `rVBK`.
@@ -28,10 +30,13 @@ hardware-identity byte the game keeps.
 | Vector | Target | Job |
 |---|---|---|
 | `$0040` VBlank | `VBlankHandler` (`$00:05xx`) | all per-frame hardware work |
-| `$0048` STAT | `StatInterruptHandler` | the scroll split (window/HUD region) chosen by the mode |
+| `$0048` STAT | `StatInterruptHandler` | per-line scroll wave (see below); entry chosen by `wSTATSplitEnable` |
+| `$0050` Timer | padding | inside the STAT vector's 13 `$00` bytes; the timer is never enabled |
 | `$0058` Serial | `SerialInterruptHandler` | link-cable byte completion |
-| `$0060` Timer | — | not used by the game (the timer is disabled) |
-| `$0068` Joypad | `LinkExchangeJoypadPerFrame` path | SGB/link joypad exchange |
+| `$0060` Joypad | padding | 32 `$00` bytes; a joypad interrupt would run into `$0080` — the game never enables it |
+
+The game enables only VBlank, STAT and serial interrupts (`rIE` values `$01`, `$03`,
+`$09`, `$0B` at every `ResumeAfterModeChange` site); `rTAC` is written nowhere.
 
 ### `VBlankHandler` order (this is the frame contract)
 
@@ -107,14 +112,16 @@ pause menu's INFO screen enters mode 2.
 ## Banking: the far-call idiom
 
 ```
-    rst  $10          ; push current bank, select bank B
-    rst  $18          ; call the routine at HL, then restore the bank
+    rst  $10          ; one call: push the current bank, select bank B,
+                      ; run the routine at HL, put the bank back
 ```
 
-* `RST_10` (`$0010`): read `[$4000]` (current ROM bank), push it,
-  `ld [$2100],b` (MBC5 low bank register), `ret`.
-* `RST_18` (`$0018`) → `Call_000_000e`: `ld a,[hl+]`, `ld h,[hl]`, `ld l,a`,
-  `jp hl`; the called routine ends with `pop af`, `ld [$2100],a`, `ret`.
+`RST_10` (`$0010`) is the whole convention, `CallInBank`: bytes at `$0010` are
+`fa 00 40 f5 78 ea 00 21 cd 0e 00 f1 ea 00 21 c9` = read `[$4000]` (the mapped
+bank), push it, `ld [rROMB0],b`, `call $000E`, pop and restore the bank. `$0018`
+is *inside* that routine (`call $000E`, the `jp hl` tail); there is no second
+vector. `rst $00` is a separate thing: a 256-entry `dw` dispatch table
+(`JumpTable`) used by mode/state switches.
 
 Consequences for a reimplementation: bank switches are explicit and reversible,
 `HL` at a far call points into a pointer table in the caller's bank, and the
@@ -124,7 +131,8 @@ called routine may clobber any register except the ones the `pop` restores.
 
 Two independent generators, both stateful:
 
-1. **Frame-table PRNG** — `NextTableByte` (`$00:1726`):
+1. **Frame-table PRNG** — `NextTableByte` (`$00:095B`, immediately before its
+   table):
    `wRandomHi = (wRandomHi + 1) & $7F`, `wRandomLo = RandomByteTable[wRandomHi]`
    (128-byte table at `$00:0973`). Called once per main-loop wake when not
    linked, plus 46 explicit call sites (`AdvanceRandom`,
@@ -147,7 +155,9 @@ them during VBlank. Entries are built each frame by
 
 ## Fades
 
-`wFadeState`: 0 = none, bit 7 set = the fade is "instant"/final. `StepFade`
+`wFadeState`: 0 = none; bit 7 is the **direction**, not a speed: with it set
+`StartPaletteFade` begins at the extreme level (`$20` SGB / `$04` DMG) and the
+step routine moves the other way (`+5`/`-5`). `StepFade`
 runs the palette interpolation; `RunGameModeUpdate` pauses game logic while a
 fade runs (except in link mode); palettes are uploaded in VBlank only when the
 fade is idle, so a fade writes the buffers directly.
@@ -160,11 +170,20 @@ path polls instead). It fills `wJoypadHeld`/`wJoypadHeldPrev` from
 
 ## Screen shake and scroll split
 
-`ApplyScreenShake` runs in VBlank right after `CopyScrollToHardware` and offsets
-the scroll registers by `wScreenShakeOffset` while `wScreenShakeTimer` counts
-down. The STAT handler implements the split screen (fixed HUD window vs.
-scrolling field) by rewriting `rSCY`/`rWY` mid-frame at a scanline chosen by the
-mode.
+`ApplyScreenShake` runs in VBlank right after `CopyScrollToHardware`: the timer
+value (`wScreenShakeTimer`) drives `rSCY` and the offset value
+(`wScreenShakeOffset`) drives `rSCX`, both through `(2n & 7)` with a `-4` bias on
+X. It exits early when `hWindowY | wScreenShakeOffset == 0`, so a vertical-only
+shake draws only when the window is not at row 0.
+
+The STAT handler is not a window/HUD split. It dispatches on `wSTATSplitEnable
+& 3` into a four-entry table (0 exit, 1 no-op, 2 horizontal wave, 3 vertical
+wave); a wave writes `rSCX` (or `rSCY`) from `wBGPaletteCopy + rLY` and then
+raises `rLYC` by 2, wrapping at `$90` (horizontal) or `$81` (vertical). It never
+writes `rWY`. Because it indexes `wBGPaletteCopy` with an unmasked `rLY`, the
+table it uses is at least `$90` bytes long and overlaps `wTextBuf0`-`wTextBuf3`
+(`$C130` onward) and `wTextNumber`; the warp effect (`WarpEffect_Cover`) fills
+`$90` bytes there deliberately.
 
 ## Sound hook
 
