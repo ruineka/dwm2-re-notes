@@ -1,0 +1,18 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# local scratch
+.scratch/
+*.tmp
+
+# never commit game data
+*.gbc
+*.gb
+*.gbx
+*.sav
+*.srm
+*.ram
+*.state
