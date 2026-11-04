@@ -27,7 +27,7 @@ A `dfar`-driven struct; `dfar X` = `{dw X, db BANK(X)}` (3 bytes):
 | 13 | 1 | sprite kind (high nibble = special-tile set, low nibble 1 = follower sprite) |
 | 14 | 1 | tall-tile minimum **or** event tile (depends on sprite kind's low nibble) |
 | 15 | 1 | unread (always 0) |
-| 16 | 2 | variant flag (`dw`, WRAM address of a story flag) |
+| 16 | 2 | variant flag (`dw`): always `wStoryFlags + $60…$69`, i.e. story flags 768–847 (histogram `$CC3B` 44×, `$CC3A` 32×, `$CC37` 30×, `$CC39` 21×) |
 | 18 | 6N | N variants of `{dfar screens, dfar attrs}` |
 
 Size = `18 + 6N`. **N is not stored**; recover it from the distance to the next
@@ -97,6 +97,24 @@ colours and belongs to **map 0**; every map record carries its own palette dfar
 and the loader copies whichever set the record names. Map 0's grass is palette 2
 (`0x02C0 0x3F7F`).
 
+## Special maps
+
+Not every map uses the ordinary record. `SpecialMapTable` at **bank `$61`, CPU
+`$60D8`** holds 128 words; 35 of them point at **26-byte special-map records**
+in `$61D8`–`$6565`:
+
+| Off | Size | Field |
+|---|---|---|
+| 0 | 4 | tileset `dfar` |
+| 4 | 4 | palette `dfar` |
+| 8 | 5 | header bytes (width, height, cutoffs, kind) |
+| 13 | 9 | unread |
+| 22 (`+$14`) | 4 | screen-array `dfar` |
+| 26 (`+$17`) | 4 | attribute-array `dfar` |
+
+These are the interiors and menus that have no grid of screens, so a decoder that
+only models `18 + 6N` records will fail on them.
+
 ## Objects (NPCs, chests, signs)
 
 `MapObjectTable` at **bank `$69`, CPU `$4174`** — 228 words indexed by
@@ -127,9 +145,9 @@ An object list is a count byte + that many **11-byte records**:
 | 1 | graphics table index |
 | 2 | graphics number in that table |
 | 3 | graphics id high byte |
+| 4 | behaviour type (0–5, a six-entry jump table in `UpdateSpriteSlots`) |
 | 5 | X in pixels (cell = `>>3`) |
 | 6 | Y in pixels |
-| 4 | behaviour type (0–5, a six-entry jump table in `UpdateSpriteSlots`) |
 | 7 | OBJ attribute byte (palette in bits 0–2) |
 | 8 | state/facing, and the graphics loader's palette slot |
 | 9 | tile offset added by the sprite parts (`page low nibble << 4`) |
@@ -158,6 +176,11 @@ pointers indexed by `hMapId`, each to a list of **9-byte records terminated by
 `CheckWarpAtPlayer` is the reader. `$FE`/`$FF` entries fire on a **screen
 transition** (after `hMapScreenX/Y` change), so their source screen can be one
 past the map edge or `$FF` (walked off the left/top edge).
+
+Census over the 504 records: byte 0 is `$FD` in 353, `$FE` in 116, `$FF` in 31 and
+a facing value 0–3 in 4; byte 5 bit 7 is set in 58. `$FD` records never reach
+`CheckWarpAtPlayer` (they are step-triggered), which is why nearly all of them
+carry a positional source.
 `wWarpDestX = (byte7 & 0x0F) << 4`, `wWarpDestY = (byte8 & 0x0F) << 4` plus
 **8 px when byte 5 bit 7 is set**.
 
