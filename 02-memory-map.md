@@ -144,7 +144,7 @@ Field actions and triggers:
 | `$C707` | `wKeyList` | up to 32 four-byte key entries (`$FF` ends) |
 | `$C787` | `wKeySeeds` | two bytes per key: the seed the world is generated from |
 | `$C7C7` | `$C7C7` `wFarmLevel` | how many SRAM records the farm holds |
-| `$C7CC` | `wSpeciesFlags` | seen/owned species bitmap (47 B) |
+| `$C7CC` | `wSpeciesFlags` | owned-species bitmap (47 B); the library's per-family counts are its set bits, and nothing reads a separate "seen" bit |
 | `$CBD7` | `wStoryFlags` | story flags: flag *n* = bit `n&7` of byte `$CBD7 + n/8` |
 | `$C82D`–`$C831` | `wPlayFrames/Seconds/Minutes/Hours` | play time |
 | `$C833` | `wCurrentKeyIndex` | key entry in use |

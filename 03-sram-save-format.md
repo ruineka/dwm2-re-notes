@@ -66,12 +66,15 @@ A fourth checksum, the **saved-block** checksum at `0x3F98` == `sum(0x3B01..0x3E
 Text uses the game's charset (`$0A`–`$23` = `A`–`Z`, `$24`–`$3D` = `a`–`z`,
 `$F0` = end).
 
-### Compact record (`0x6F` = 111 B) — a lossy cache, not authoritative
+### Compact record (`0x6F` = 111 B) — lossy, and the only copy for hibernating monsters
 
-The farm/hibernate list shows these. Packed from the full records on save
-(`PackRecordFieldsToBank1Slot`) and unpacked on load. Names truncate to five
-letters; stat words keep the low byte plus two high bits. The 30 full records in
-bank 0 stay the source of truth.
+The compact form truncates names to five letters and keeps the low byte plus two
+high bits of each stat word. It is not merely a cache: when a monster hibernates,
+its full `$A5` record is deleted (the record list closes up) and the compact slot
+becomes the only live copy, restored into a full record when the monster wakes.
+So the compact store is authoritative for hibernating monsters and lossy by
+design; the full records hold the active farm. The bank-1 mirror at `0x206F` is a
+backup covered by the bank-1 checksum, not a second source of truth.
 
 Regions that hold compact records:
 
@@ -102,9 +105,10 @@ Player block fields:
 |---|---|---|
 | `0x3B0F` | player_name (10 B) | |
 | `0x3B19` | player_id | |
-| `0x3B1A` | gold | 24-bit |
-| `0x3B1D` | item vault | 100 × `{id, count}` |
+| `0x3B1A` | gold | 24-bit (`wGoldLo/Mid/Hi` `$C617`–`$C619`) |
+| `0x3B1D` | banked gold | 24-bit second amount (`wBankedGoldLo/Mid/Hi` `$C61A`–`$C61C`), moved by the shop/bank script command `$E5` |
 | `0x3B20` | bag | 24 one-based item ids |
+| `0x3B38` | item vault | 100 × `{id, count}`, 200 B, ends exactly at `0x3C00` (`wItemStorage` `$C635`) |
 | `0x3C00` | party_count | |
 | `0x3C01` | party_list | 3 record indices |
 | `0x3C0A` | key list | 32 × 4 B (`kind`, two name words, level/flag) |
