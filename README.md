@@ -18,6 +18,17 @@ from these notes and verify each fact in minutes.
 | [`HOW-TO-RECOMP-AND-PORT.md`](HOW-TO-RECOMP-AND-PORT.md) | **The two builds.** Static recompilation (translator, runtime, code/data separation, banking, interrupts, PPU/APU timing) and a clean-room port (state parity, architecture, extraction, bring-up order), plus the project layout for both |
 | [`GLOSSARY.md`](GLOSSARY.md) | Every term used here, one line each, with the search phrase that finds the authoritative source |
 
+Read it in this order depending on what you need:
+
+* **I want to build something.** Read the two guides, then `01` (where everything
+  lives), `04` (the frame contract every subsystem depends on) and the files for
+  the subsystems you are porting first — field and text, usually.
+* **I want to understand one system.** Go straight to its file; every one opens
+  with its structure and ends with the addresses and the open questions.
+* **I want to check a claim.** The conventions below say how to turn an address
+  into a file offset; `HOW-TO.md` §4 says what counts as evidence and §6 how to
+  catch a bad decode.
+
 ## The reference
 
 | # | File | Contents |
@@ -36,6 +47,19 @@ from these notes and verify each fact in minutes.
 | 12 | [`12-audio.md`](12-audio.md) | Sound engine, track format, commands, music ids |
 | 13 | [`13-graphics-and-assets.md`](13-graphics-and-assets.md) | Tile format, sprite sheets and meta-sprites, palettes, fonts, art banks |
 | 14 | [`14-editions.md`](14-editions.md) | Tara vs Cobi: the byte diff, the hero-variant flag, what is safe to share |
+
+## The repository itself
+
+| File | Purpose |
+|---|---|
+| [`PROVENANCE.md`](PROVENANCE.md) | what the facts were derived from, the standard each claim was held to, and what was deliberately left out |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the evidence bar for a correction, and the shape of a useful report |
+| [`tools/check.py`](tools/check.py) | layout check: titles, links, the numbered set, no absolute paths, no game data — runs in CI on every push |
+| [`LICENSE`](LICENSE) | CC BY 4.0 |
+
+```sh
+python3 tools/check.py     # 24 files, 20 Markdown, 0 errors
+```
 
 ## Conventions
 

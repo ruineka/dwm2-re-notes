@@ -54,8 +54,10 @@ def main() -> int:
         if p.stat().st_size > MAX_BYTES:
             errors.append(f"{rel}: {p.stat().st_size} bytes is too large")
 
-    # 2. titles
+    # 2. titles (issue templates start with YAML front matter instead)
     for p in md_files:
+        if ".github" in p.parts:
+            continue
         first = p.read_text(encoding="utf-8").splitlines()[:1]
         if not first or not first[0].startswith("# "):
             errors.append(f"{p.relative_to(ROOT)}: missing '# ' title line")
