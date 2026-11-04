@@ -50,9 +50,12 @@ button, bit 7 counts `wTextDelayCounter` down; (6) else the next byte: `$8D`/`$8
 else a glyph.
 
 Reveal speed (must match): a glyph is drawn only when `wTextGlyphTimer` reaches `wTextSpeed` (`$C964`; **0 acts as
-1**) or the `<SPEED>` argument, and not under `<FAST>`. `wTextSpeed` is also the `<PAUSE>` length; at speed 7
-`<PAUSE>` waits for a button. New game = 1; battle setup copies `wBattleTextSpeed` (`$C834`, saved; 3 in link
-battles); battle end sets 1. A button pressed while waiting for a glyph turns on `<INSTANT>` (`wTextControl` bit 7),
+1**) or the `<SPEED>` argument, and not under `<FAST>`. New game = 1; battle setup copies
+`wBattleTextSpeed` (`$C834`, saved; 3 in link battles); battle end sets 1.
+
+`<PAUSE>` does **not** use `wTextSpeed`. It indexes a seven-entry table of frame counts at `$2A66` —
+`$06 $0C $14 $1A $20 $28 $30` for arguments 1–7 — so short pauses are 6–48 frames, and only the
+seventh argument waits for a button. A button pressed while waiting for a glyph turns on `<INSTANT>` (`wTextControl` bit 7),
 printing the rest at once. Each 16-byte copy waits on `rSTAT` bit 1, so writes land in the VBlank-safe window.
 Window defaults: 2 rows × 18 columns at `vTiles1 = $8800`.
 
@@ -60,7 +63,7 @@ Window defaults: 2 rows × 18 columns at `vTiles1 = $8800`.
 |---|---|
 | `wStringCategory` `$C528`, `wStringIndex` `$C529`, `wStringBank` `$C52A` | resolved string / its bank |
 | `wTextFlags` `$C52B` | non-zero = text live; bit 1 fast/active, bit 2 prompt, bit 5 arrow, bits 3/4/6/7 per command |
-| `wTextControl` `$C52C` | bit 0 beep, bit 1 sound wait, bit 2 choice input, bit 7 instant/continue |
+| `wTextControl` `$C52C` | bit 0 beep, bit 2 sound wait, bit 6 repeat, bit 7 instant/continue (bit 1 is unused) |
 | `wTextWindowTile` `$C52D/E`, rows `$C52F`, width `$C530` | where the box draws (next row = `dest + 16*width`, `$00:$2C21`) |
 | `wTextGlyphDest` `$C531/2`, `wTextPos` `$C533/4`, `wTextLineStart` `$C535/6`, `wTextStartPos` `$C537/8` | next glyph VRAM address, next string byte, row start, prompt return |
 | `wTextControlArg` `$C539`, `$C53B`, `wTextDelayCounter` `$C53C`, `wTextGlyphTimer` `$C54F`, `wTextLastChar` `$C550`, `wTextYesNoResult` `$C552`, `wTextCursor` `$C554/5`, `wTextBeepSound` `$C556` | control-code operands, glyph timer, last command, choice result, BG row cursor, per-glyph beep |
@@ -80,7 +83,7 @@ Table at `$00:$2956`, indexed by `byte-$E0`.
 | `$EA`/`$EB` | — | voice beep on, `wTextBeepSound = $6B`/`$6A` |
 | `$EC` | — | pause: clears bit 7; length from `wTextSpeed`; at speed 7 waits for a button |
 | `$ED` | — | `<INSTANT>`: set `wTextControl` bit 7 (bulk print) |
-| `$EE` / `$F3` | — | clear the second line, back to the line start / back to the line start |
+| `$EE` / `$F3` | — | clear the second line, back to the line start / move to the window's first line (not the line start) |
 | `$EF` | — | first half of `<NEXT>`; on line 1 it swallows the following byte |
 | `$F0` | — | end of string (or of an inserted buffer → return to `wTextStartPos`) |
 | `$F1` / `$F2` | — | `<LINE>` next line, no scroll / `<CLEAR>` blank the box, back to line 1 |
