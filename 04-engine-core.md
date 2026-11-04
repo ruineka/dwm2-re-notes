@@ -5,7 +5,7 @@ Routines below are named as in the annotated disassembly; addresses are
 
 ## Reset and boot
 
-`BootAndMainLoop_StartUp` (`$00:01xx`, the entry the reset vector jumps to):
+`BootAndMainLoop_StartUp` (entry reached from the reset vector `$0100`; the loop itself is at `$0150`):
 
 1. `di`, `ld sp,$DFFF` (`wStackTop`).
 2. `DisableVBlankTimerSerialJoypadInterrupts`.
@@ -29,7 +29,7 @@ hardware-identity byte the game keeps.
 
 | Vector | Target | Job |
 |---|---|---|
-| `$0040` VBlank | `VBlankHandler` (`$00:05xx`) | all per-frame hardware work |
+| `$0040` VBlank | `VBlankHandler` (`$00:03A4`) | all per-frame hardware work |
 | `$0048` STAT | `StatInterruptHandler` | per-line scroll wave (see below); entry chosen by `wSTATSplitEnable` |
 | `$0050` Timer | padding | inside the STAT vector's 13 `$00` bytes; the timer is never enabled |
 | `$0058` Serial | `SerialInterruptHandler` | link-cable byte completion |

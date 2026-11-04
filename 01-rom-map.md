@@ -11,6 +11,7 @@ a bank is 16 KiB, so `$11:459A` means file offset `0x4459A`.
 |---|---|
 | Size | 4,194,304 B = 256 banks × 16 KiB |
 | Cartridge type | `$1B` = MBC5 + RAM + battery |
+| Bank number byte | byte 0 of every non-empty bank holds that bank's own number (156 of 157 checked; `$00` holds the boot entry instead) |
 | ROM size code | `$07` (4 MiB = 256 banks of 16 KiB; header byte at `$0148`) |
 | RAM size code | `$03` (4 banks × 8 KiB = 32 KiB) |
 | CGB flag | `$80` (CGB-only title; runs on DMG in monochrome compatibility mode) |
