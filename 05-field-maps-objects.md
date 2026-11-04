@@ -42,8 +42,12 @@ Verified examples:
 * **Map 29 ("Deck")**: `W=2 H=1 cutoff=$37`, 2 variants, screens at `$90:75DE`.
 * **Map 41**: `W=1 H=1 cutoff=$32`, 7 variants.
 
-Variant selection: the record's flag word is tested; the first variant whose
-condition matches supplies the screens.
+Variant selection walks the flag byte's bits from bit 7 down
+(`ld hl,record+$12`, `add $30`, then `sla a` / step back 6 bytes per clear bit):
+**bit n selects the record at `record+$18+6n`**, and a flag byte of 0 selects
+`record+$12`. Since the flag byte is a story-flag byte only 8 bits are
+reachable, so a record with more than nine slots (map 155 has 13) has slots this
+reader can never select.
 
 ## Screen and attribute streams (layout decoder)
 
@@ -59,7 +63,10 @@ for i in 0..rows-1:
 The copy reads from the **already decoded** buffer, so a 2-byte source pattern
 propagates into long runs — that is how fences and grass rows are encoded.
 Verified byte-exact against live VRAM (`2672/2672` bytes across the five
-uploads of one screen). `{marker, $FF, $FF}` is a whole-screen repeat.
+uploads of one screen). `{marker, $FF, $FF}` is not a repeat: offset `$FFF`
+resolves past the 360-byte screen, the wrap code adds `$F0` to the page (and
+`$10` on a second miss) and the byte read is 0, so it is a **zero-fill run** of
+`next + $13` bytes.
 
 The attribute stream (CGB attribute byte per tile) uses the same format and is
 paired with the layout: layout `$46:49F6` ↔ attrs `$46:5363`, layout
@@ -79,9 +86,15 @@ copy command, but the destination is VRAM):
 | `$7D:4D02` | `$8600` | 224 |
 | `$46:570C` | `$9000` | 1712 |
 
-The BG tile-id base for the field is **`$8800` (signed mode, LCDC.4 = 0)**. The
-CGB BG palette table for the field is 8 palettes × 4 RGB555 colours at
-**file `0x120001`** (bank `$48`); the field's grass is palette 2
+The BG tile-id base for the field is **`$8800` (signed mode, LCDC.4 = 0)**.
+The five uploads above are what one screen loads, not fixed destinations: a map's
+record names its own tileset dfar (loaded to `vTiles2 = $9000`), the player sheet
+goes to `$8000`, follower sheets to `vTiles0+$100+i*$100`, and NPC sheets to
+`$85`/`$86` pages.
+
+The palette set at **file `0x120001`** (bank `$48`) is 8 palettes × 4 RGB555
+colours and belongs to **map 0**; every map record carries its own palette dfar
+and the loader copies whichever set the record names. Map 0's grass is palette 2
 (`0x02C0 0x3F7F`).
 
 ## Objects (NPCs, chests, signs)
@@ -113,11 +126,12 @@ An object list is a count byte + that many **11-byte records**:
 | 0 | VRAM page (`$85`/`$86` seen) |
 | 1 | graphics table index |
 | 2 | graphics number in that table |
-| 3–4 | unknown (0 so far) |
+| 3 | graphics id high byte |
 | 5 | X in pixels (cell = `>>3`) |
 | 6 | Y in pixels |
-| 7 | palette slot |
-| 8 | facing |
+| 4 | behaviour type (0–5, a six-entry jump table in `UpdateSpriteSlots`) |
+| 7 | OBJ attribute byte (palette in bits 0–2) |
+| 8 | state/facing, and the graphics loader's palette slot |
 | 9 | tile offset added by the sprite parts (`page low nibble << 4`) |
 | 10 | talk byte (`$FF/$FE/$FC/$FB/$FA` are sentinels, else the talk group) |
 

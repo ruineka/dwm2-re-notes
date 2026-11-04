@@ -25,7 +25,7 @@ Cutscene/title/world-map screens compose into 20×18 buffers:
 
 | symbol | address | meaning |
 |---|---|---|
-| `wScreenTileBuffer` | `$C198` | 20×18 tiles, **stride 20**, direct tile ids (360 B) |
+| `wScreenTileBuffer` | `$C198` | 20×18 tiles, **stride 20**, tile ids that mostly match the BG map; the buffer is not a plain copy of the map (a measurement of one field screen found 260 of 360 entries equal) |
 | `wScreenAttrBuffer` | `$D000` (WRAM bank 2) | 20×18 attributes; only bits 0-2 reach VRAM bank 1 |
 | `wSavedScreenAttrs` | `$D2D0` | 360-byte attribute save |
 | `wScreenSavedFlag` | `$CB7E` | saved `wSpriteSlotCount` (`$CB7D`) |
@@ -95,7 +95,7 @@ Field-command graphics: `FieldCommandSpriteTable $12:$4B04C`, 88 B = 22 records 
 
 ## 5. Sprite slots (map NPCs)
 
-`wSpriteSlots` `$CB7F` holds five 16-byte records, count `wSpriteSlotCount $CB7D`, slot 4 ends `$CBCE`; scripts call slot *N* `wObjectN` (`$CB8F..$CBBF` for 1-4). Fields: +0 type (0-5), +1 `OBJ_SET_MODE`, +2/+3 `OBJ_SPRITE_ID` low/high, +4/+5 home X / record Y, +6 `OBJ_ATTR` (palette), +7 `OBJ_STATE` (facing), +8 `OBJ_TILE_OFFSET`, +9 `OBJ_ANIM_COUNTER`, +A move byte, +B/+C `OBJ_X`/`OBJ_Y`, +D `OBJ_FLAGS` (bit 1 stop counter, bit 2 frame from counter), +E `OBJ_SUBINDEX` (bit 7 = X flip → attr bit 5), +F talk byte.
+`wSpriteSlots` `$CB7F` holds five 16-byte records, count `wSpriteSlotCount $CB7D`, slot 4 ends `$CBCE`; scripts call slot *N* `wObjectN` (`$CB8F..$CBBF` for 1-4). Fields: +0 type (0-5), +1 `OBJ_SET_MODE`, +2/+3 `OBJ_SPRITE_ID` low/high, +4/+5 home X / record Y, +6 `OBJ_ATTR` (palette), +7 `OBJ_STATE` (facing); record bytes `[7]` and `[8]` map to `OBJ_ATTR` and `OBJ_STATE`, and byte `[8]` doubles as the graphics loader's palette slot, +8 `OBJ_TILE_OFFSET`, +9 `OBJ_ANIM_COUNTER`, +A move byte, +B/+C `OBJ_X`/`OBJ_Y`, +D `OBJ_FLAGS` (bit 1 stop counter, bit 2 frame from counter), +E `OBJ_SUBINDEX` (bit 7 = X flip → attr bit 5), +F talk byte.
 
 Behaviour (`UpdateSpriteSlots $04:$456D`, dispatch words at `$04:$4576`): 0 still `$4592`, 1 none `$4704`, 2 wander L/R ±`$20` around home X `$4606`, 3 wander four-way `$4705`, 4 frame loop table `$48D6` `$4863`, 5 frame loop table `$48FA` `$486E`. Frame picker `$04:$45A7`: `c = (flags & 4) ? (counter>>3)&1 : (counter>>5)&1`; `OBJ_SUBINDEX = (state == 3) ? $82 + c : 2*state + c`. Draw `$04:$44CE` sets `hTemp0 = OBJ_SET_MODE`, `hSpriteAttrXor = OBJ_ATTR & 7`, `hSpriteTileOffset = OBJ_TILE_OFFSET`, origin `OBJ_X+8+hScrollX` / `OBJ_Y+$10+hScrollY`, and `hSpriteSubIndex = OBJ_SUBINDEX` (bit 7 → attr XOR `$20`, byte `& $7F`).
 

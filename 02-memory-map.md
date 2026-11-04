@@ -88,9 +88,9 @@ Map header copies (loaded by `LoadMapHeader` from the map record):
 | `$C193` | `wMapHeaderByte7` | read by `CheckInteractionInFront` |
 | `$C194` | `wMapMoveType` | selects the player movement routine |
 | `$C195` | `wMapSpriteKind` | high nibble = script sprite set, low nibble 1 = follower-style sprite |
-| `$C196` | `wMapTallTileMin` | tiles ≥ this count as "tall" |
+| `$C196` | `wMapTallTileMin` | tall-tile threshold: tile ids strictly **above** it are tall (the comparison is `tile > min`) |
 | `$C197` | `wMapEventTile` | tile that fires the header talk event when faced |
-| `$C198` | `wScreenTileBuffer` | `$240`-byte tile buffer of the current screen (stride 32, field code indexes 20-wide rows) |
+| `$C198` | `wScreenTileBuffer` | `$240`-byte tile buffer of the current screen; field code indexes it with 20-byte rows (`(Y>>3)*20 + (X>>3)`), while the 32-byte row copies are the menu/window path |
 | `$C300` | `wWindowTileBuffer` | 20×18 window/menu tile buffer |
 | `$D000` | `wScreenAttrBuffer` | WRAM bank 2: CGB attributes for the screen buffer |
 | `$D168` | `wWindowAttrBuffer` | WRAM bank 2: attributes for the window buffer |
@@ -124,7 +124,7 @@ Field actions and triggers:
 | `$FFB1` | `hOamNextEntry` | next OAM entry the builder writes |
 | `$FFB3`–`$FFB8` | `hMetaSprite*` | meta-sprite builder work (origin ± scroll, flipped origin) |
 | `$FFD2`–`$FFD5` | `hSpriteScrollX/Y (Lo/Hi)` | scroll offsets for sprites, computed per frame |
-| `$CB7D`/`$CB7F` | `wSpriteSlotCount` / `wSpriteSlots` | object slot array (8-byte slots) |
+| `$CB7D`/`$CB7F` | `wSpriteSlotCount` / `wSpriteSlots` | object slot array, **16-byte slots in field mode** (the 8-byte layout is the bank-`$E0` intro drawer) |
 | `$CB8F`–`$CBBF` | `wObject1`–`wObject4` | four 16-byte field objects |
 | `$CBCF` | `wObject5` | script meta-sprite object (byte 0 bit 7 = shown) |
 | `$CB75`/`$CB76` | `wSequencePtrLo/Hi` | running animation sequence |
